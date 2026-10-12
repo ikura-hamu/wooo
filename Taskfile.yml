@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: "3"
+
+tasks:
+  build:
+    cmd: go build -o wooo .
+
+  test:
+    cmd: go test -v
+
+  run:
+    deps:
+      - build
+    cmds:
+      - ./wooo {{.CLI_ARGS}} > {{.TASKFILE_DIR}}/.run.wat
+      - wat2wasm {{.TASKFILE_DIR}}/.run.wat
+      - node .run.js {{.TASKFILE_DIR}}/.run.wasm
+    desc: Run programs compiled by wooo. ex.) \`task run -- {go filename}\`
+
+  watch-test:
+    cmd: go test -v .
+    watch: true
+    aliases:
+      - wt
+    sources:
+      - "**/*.go"
+      - testdata
