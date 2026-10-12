@@ -1,0 +1,7 @@
+{
+	"Test case snippet": {
+		"scope": "toml",
+		"prefix": "test",
+		"body": "[[test]]\nsource = '''\n$1\n'''\njs = '${2:stdout.js}'$0\n"
+	}
+}
