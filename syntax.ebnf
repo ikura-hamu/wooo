@@ -1,0 +1,109 @@
+GoProgramFile
+  = SourceFile;
+
+(* ## Source code representation *)
+(* ### Characters*)
+unicode_letter
+  = (* a Unicode code point categorized as "Letter" *) ;
+
+unicode_digit
+  = (* a Unicode code point categorized as "Number, decimal digit" *) ;
+
+(* ### Letters and digits*)
+letter
+  = unicode_letter | "_";
+
+decimal_digit
+  = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
+
+(* ## Lexical elements *)
+(* ### Identifiers *)
+identifier
+  = letter, { letter | unicode_digit };
+
+(* ### Integer literals*)
+int_lit
+  = decimal_lit;
+
+decimal_lit
+  = "0" | ( "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ), [ [ "_" ], decimal_digits ];
+
+decimal_digits
+  = decimal_digit, { [ "_" ], decimal_digit };
+
+(* ## Types *)
+Type
+  = TypeName;
+
+TypeName
+  = identifier;
+
+(* ### Function types *)
+Signature
+  = Parameters, [ Result ];
+
+Result
+  = Parameters | Type;
+
+Parameters
+  = "(", ")";
+
+(* Blocks *)
+Block
+  = "{", StatementList, "}";
+
+StatementList
+  = { Statement, ";" };
+
+(* ## Declarations and scope *)
+TopLevelDecl
+  = FunctionDecl;
+
+(* ### Function declarations *)
+FunctionDecl
+  = "func", FunctionName, Signature, [ FunctionBody ];
+
+FunctionName
+  = identifier;
+
+FunctionBody
+  = Block;
+
+(* ### Constant declarations *)
+ExpressionList
+  = Expression;
+
+(* ## Expressions *)
+(* ### Operands *)
+Operand
+  = Literal;
+
+Literal
+  = BasicLit;
+
+BasicLit
+  = int_lit;
+
+(* ### Primary expressions *)
+PrimaryExpr
+  = Operand;
+
+(* ### Operators *)
+Expression
+  = UnaryExpr;
+
+UnaryExpr
+  = PrimaryExpr;
+
+(* ## Statements *)
+Statement
+  = ReturnStmt;
+
+(* ### Return statements *)
+ReturnStmt
+  = "return", [ ExpressionList ];
+
+(* ## Packages *)
+(* ### Source file organization *)
+SourceFile
+  = { TopLevelDecl, ";" };
