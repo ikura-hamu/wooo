@@ -1,0 +1,12 @@
+#:schema ./testcase.schema.json
+
+[[test]]
+source = '''
+func Run() int {
+	return 1;
+};
+'''
+stdout = '''
+1
+'''
+js = "stdout.js"

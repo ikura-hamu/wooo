@@ -1,0 +1,29 @@
+{
+  "properties": {
+    "test": {
+      "type": "array",
+      "additionalProperties": false,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "stdout": {
+            "type": "string"
+          },
+          "stderr": {
+            "type": "string"
+          },
+          "js": {
+            "type": "string"
+          }
+        },
+        "required": ["source", "js"]
+      }
+    }
+  }
+}
