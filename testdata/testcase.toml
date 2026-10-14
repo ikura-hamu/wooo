@@ -10,3 +10,14 @@ stdout = '''
 1
 '''
 js = "stdout.js"
+
+[[test]]
+source = '''
+func Run() int {
+	return 1
+}
+'''
+js = 'stdout.js'
+stdout = '''
+1
+'''

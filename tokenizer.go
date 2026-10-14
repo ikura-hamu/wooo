@@ -206,10 +206,36 @@ func tokenizeOperatorsAndPunctuation(fileName string, input string, start int) (
 	return nil, false
 }
 
+func mustInsertSemicolon(tokens []*token, input string, start int) bool {
+	if input[start] != '\n' {
+		return false
+	}
+	if len(tokens) == 0 {
+		return false
+	}
+	lastToken := tokens[len(tokens)-1]
+
+	return lastToken.kind == TK_IDENT ||
+		lastToken.kind == TK_INT ||
+		lastToken.kind == TK_RETURN ||
+		lastToken.kind == TK_OPERETORS_PUNCTUATION && lastToken.value == "}"
+}
+
 func tokenize(fileName string, input string) ([]*token, error) {
 	var tokens []*token
 	start := 0
 	for end := 1; end <= len(input); {
+		if mustInsertSemicolon(tokens, input, start) {
+			tokens = append(tokens, &token{
+				kind:  TK_OPERETORS_PUNCTUATION,
+				value: ";",
+				pos: &pos{
+					fileName: fileName,
+					start:    start,
+					end:      start,
+				},
+			})
+		}
 		if isWhitespaces(input, start, end) {
 			start = end
 			end = start + 1
