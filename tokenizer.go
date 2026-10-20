@@ -16,8 +16,10 @@ const (
 	TK_RETURN
 	// 識別子
 	TK_IDENT
-	// 演算子と区切り記号
-	TK_OPERETORS_PUNCTUATION
+	// 区切り記号
+	TK_PUNCTUATION
+	// 二項演算子
+	TK_BINARY_OPERATOR
 	// ファイルの終わり
 	TK_EOF
 )
@@ -51,8 +53,12 @@ var digits = []byte{
 	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 }
 
-var operatorsAndPuctuations = []string{
+var puctuations = []string{
 	";", "(", ")", "{", "}",
+}
+
+var binaryOperators = []string{
+	"+",
 }
 
 func isLetterOrDigit(b byte) bool {
@@ -188,12 +194,30 @@ func tokenizeIdentifier(fileName string, input string, start int) (*token, bool)
 	}, true
 }
 
-func tokenizeOperatorsAndPunctuation(fileName string, input string, start int) (*token, bool) {
-	for _, op := range operatorsAndPuctuations {
+func tokenizePunctuation(fileName string, input string, start int) (*token, bool) {
+	for _, p := range puctuations {
+		end := start + len(p)
+		if input[start:end] == p {
+			return &token{
+				kind:  TK_PUNCTUATION,
+				value: p,
+				pos: &pos{
+					fileName: fileName,
+					start:    start,
+					end:      end,
+				},
+			}, true
+		}
+	}
+	return nil, false
+}
+
+func tokenizeBinaryOperators(fileName string, input string, start int) (*token, bool) {
+	for _, op := range binaryOperators {
 		end := start + len(op)
 		if input[start:end] == op {
 			return &token{
-				kind:  TK_OPERETORS_PUNCTUATION,
+				kind:  TK_BINARY_OPERATOR,
 				value: op,
 				pos: &pos{
 					fileName: fileName,
@@ -206,19 +230,24 @@ func tokenizeOperatorsAndPunctuation(fileName string, input string, start int) (
 	return nil, false
 }
 
+func isEndOfLine(input string, start int) bool {
+	return len(input) <= start || input[start] == '\n'
+}
+
 func mustInsertSemicolon(tokens []*token, input string, start int) bool {
-	if input[start] != '\n' {
-		return false
-	}
 	if len(tokens) == 0 {
 		return false
 	}
+
 	lastToken := tokens[len(tokens)-1]
+	if !isEndOfLine(input, start) || lastToken.value == ";" {
+		return false
+	}
 
 	return lastToken.kind == TK_IDENT ||
 		lastToken.kind == TK_INT ||
 		lastToken.kind == TK_RETURN ||
-		lastToken.kind == TK_OPERETORS_PUNCTUATION && lastToken.value == "}"
+		lastToken.kind == TK_PUNCTUATION && lastToken.value == "}"
 }
 
 func tokenize(fileName string, input string) ([]*token, error) {
@@ -227,7 +256,7 @@ func tokenize(fileName string, input string) ([]*token, error) {
 	for end := 1; end <= len(input); {
 		if mustInsertSemicolon(tokens, input, start) {
 			tokens = append(tokens, &token{
-				kind:  TK_OPERETORS_PUNCTUATION,
+				kind:  TK_PUNCTUATION,
 				value: ";",
 				pos: &pos{
 					fileName: fileName,
@@ -266,14 +295,33 @@ func tokenize(fileName string, input string) ([]*token, error) {
 			continue
 		}
 
-		if opPuncToken, ok := tokenizeOperatorsAndPunctuation(fileName, input, start); ok {
-			tokens = append(tokens, opPuncToken)
-			start = opPuncToken.pos.end
+		if puncToken, ok := tokenizePunctuation(fileName, input, start); ok {
+			tokens = append(tokens, puncToken)
+			start = puncToken.pos.end
+			end = start + 1
+			continue
+		}
+
+		if binOpToken, ok := tokenizeBinaryOperators(fileName, input, start); ok {
+			tokens = append(tokens, binOpToken)
+			start = binOpToken.pos.end
 			end = start + 1
 			continue
 		}
 
 		return nil, fmt.Errorf("unexpected character: %c", input[start])
+	}
+
+	if mustInsertSemicolon(tokens, input, start) {
+		tokens = append(tokens, &token{
+			kind:  TK_PUNCTUATION,
+			value: ";",
+			pos: &pos{
+				fileName: fileName,
+				start:    start,
+				end:      start,
+			},
+		})
 	}
 
 	tokens = append(tokens, &token{

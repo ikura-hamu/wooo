@@ -21,3 +21,37 @@ js = 'stdout.js'
 stdout = '''
 1
 '''
+
+[[test]]
+source = '''
+func Run() int {
+	return 1
+}'''
+js = 'stdout.js'
+stdout = '''
+1
+'''
+
+[[test]]
+name = "足し算"
+source = '''
+func Run() int {
+	return 1 + 2
+}
+'''
+js = 'stdout.js'
+stdout = '''
+3
+'''
+
+[[test]]
+name = "足し算3つ"
+source = '''
+func Run() int {
+	return 1 + 2 + 3
+}
+'''
+js = 'stdout.js'
+stdout = '''
+6
+'''

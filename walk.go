@@ -8,7 +8,7 @@ type visitor interface {
 	visit(n node) (visitor, postVisit, error)
 }
 
-func walk(v visitor, n node) error {
+func walk(v visitor, n node) (err error) {
 	if nextV, postVisit, err := v.visit(n); err != nil {
 		return fmt.Errorf("visit: %w", err)
 	} else if nextV == nil {
@@ -16,7 +16,13 @@ func walk(v visitor, n node) error {
 	} else {
 		v = nextV
 		if postVisit != nil {
-			defer postVisit()
+			defer func() {
+				if err == nil {
+					if postErr := postVisit(); postErr != nil {
+						err = postErr
+					}
+				}
+			}()
 		}
 	}
 
@@ -68,8 +74,21 @@ func walk(v visitor, n node) error {
 			return fmt.Errorf("walk expressionList expression: %w", err)
 		}
 	case *expression:
-		if err := walk(v, n.unaryExpr); err != nil {
-			return fmt.Errorf("walk expression unaryExpr: %w", err)
+		if n.expressionKind == EXPRESSION_KIND_BINARY_OP_EXPRESSION {
+			if err := walk(v, n.binaryOpExpr); err != nil {
+				return fmt.Errorf("walk expression binaryOpExpr: %w", err)
+			}
+		} else {
+			if err := walk(v, n.unaryExpr); err != nil {
+				return fmt.Errorf("walk expression unaryExpr: %w", err)
+			}
+		}
+	case *binaryOpExprNode:
+		if err := walk(v, n.left); err != nil {
+			return fmt.Errorf("walk binaryOpExprNode left: %w", err)
+		}
+		if err := walk(v, n.right); err != nil {
+			return fmt.Errorf("walk binaryOpExprNode right: %w", err)
 		}
 	case *unaryExpr:
 		if err := walk(v, n.primaryExpr); err != nil {

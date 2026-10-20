@@ -18,8 +18,8 @@ func (p *parser) currentToken() *token {
 	return p.tokens[p.cursor]
 }
 
-func (p *parser) isOpPunc(op string) bool {
-	return p.currentToken().kind == TK_OPERETORS_PUNCTUATION && p.currentToken().value == op
+func (p *parser) isPunctuation(op string) bool {
+	return p.currentToken().kind == TK_PUNCTUATION && p.currentToken().value == op
 }
 
 func (p *parser) isCurrentTokenKind(kind tokenKind) bool {
@@ -27,7 +27,7 @@ func (p *parser) isCurrentTokenKind(kind tokenKind) bool {
 }
 
 func (p *parser) expectOpPunc(op string) error {
-	if p.currentToken().kind != TK_OPERETORS_PUNCTUATION || p.currentToken().value != op {
+	if p.currentToken().kind != TK_PUNCTUATION || p.currentToken().value != op {
 		return fmt.Errorf("expected %q, got %q at cursor %d", op, p.currentToken().value, p.cursor)
 	}
 	p.cursor++
@@ -112,7 +112,7 @@ func (p *parser) functionDecl() (*functionDecl, error) {
 		return nil, fmt.Errorf("expected signature: %w", err)
 	}
 
-	if ok := p.isOpPunc("{"); !ok {
+	if ok := p.isPunctuation("{"); !ok {
 		return &functionDecl{name: name, signature: signature}, nil
 	}
 
@@ -137,7 +137,7 @@ func (p *parser) signature() (*signature, error) {
 	}
 
 	var result *result
-	if p.isOpPunc("(") || p.isCurrentTokenKind(TK_IDENT) {
+	if p.isPunctuation("(") || p.isCurrentTokenKind(TK_IDENT) {
 		result, err = p.result()
 		if err != nil {
 			return nil, fmt.Errorf("result: %w", err)
@@ -170,7 +170,7 @@ type result struct {
 }
 
 func (p *parser) result() (*result, error) {
-	if p.isOpPunc("(") {
+	if p.isPunctuation("(") {
 		parameters, err := p.parameters()
 		if err != nil {
 			return nil, fmt.Errorf("parameters: %w", err)
@@ -238,7 +238,7 @@ type statementList struct {
 
 func (p *parser) statementList() (*statementList, error) {
 	statements := make([]*statement, 0)
-	for !p.isOpPunc("}") {
+	for !p.isPunctuation("}") {
 		statement, err := p.statement()
 		if err != nil {
 			return nil, fmt.Errorf("statement: %w", err)
@@ -289,7 +289,7 @@ func (p *parser) returnStatement() (*returnStatement, error) {
 		return nil, fmt.Errorf("`return` expected: %w", err)
 	}
 
-	if p.isOpPunc(";") {
+	if p.isPunctuation(";") {
 		return &returnStatement{}, nil
 	}
 
@@ -314,8 +314,17 @@ func (p *parser) expressionList() (*expressionList, error) {
 	return &expressionList{expression: exp}, nil
 }
 
+type expressionKind int
+
+const (
+	EXPRESSION_KIND_UNARY_EXPRESSION expressionKind = iota + 1
+	EXPRESSION_KIND_BINARY_OP_EXPRESSION
+)
+
 type expression struct {
-	unaryExpr *unaryExpr
+	expressionKind expressionKind
+	unaryExpr      *unaryExpr
+	binaryOpExpr   *binaryOpExprNode
 	node
 }
 
@@ -324,7 +333,31 @@ func (p *parser) expression() (*expression, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unaryExpr: %w", err)
 	}
-	return &expression{unaryExpr: unaryExpr}, nil
+
+	expr := &expression{unaryExpr: unaryExpr, expressionKind: EXPRESSION_KIND_UNARY_EXPRESSION}
+	for p.currentToken().kind == TK_BINARY_OPERATOR {
+		operator := p.currentToken()
+		p.cursor++
+
+		right, err := p.expression()
+		if err != nil {
+			return nil, fmt.Errorf("expression: %w", err)
+		}
+
+		expr = &expression{
+			binaryOpExpr:   &binaryOpExprNode{operator: operator, left: expr, right: right},
+			expressionKind: EXPRESSION_KIND_BINARY_OP_EXPRESSION,
+		}
+	}
+
+	return expr, nil
+}
+
+type binaryOpExprNode struct {
+	operator *token
+	left     *expression
+	right    *expression
+	node
 }
 
 type unaryExpr struct {

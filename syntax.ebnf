@@ -90,7 +90,10 @@ PrimaryExpr
 
 (* ### Operators *)
 Expression
-  = UnaryExpr;
+  = UnaryExpr | Expression, binary_op, Expression;
+
+binary_op
+  = "+";
 
 UnaryExpr
   = PrimaryExpr;
