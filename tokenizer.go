@@ -58,7 +58,7 @@ var puctuations = []string{
 }
 
 var binaryOperators = []string{
-	"+",
+	"+", "-",
 }
 
 func isLetterOrDigit(b byte) bool {

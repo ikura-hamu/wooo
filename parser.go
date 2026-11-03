@@ -14,6 +14,12 @@ type parser struct {
 	cursor int
 }
 
+func (p *parser) consumeToken() *token {
+	token := p.currentToken()
+	p.cursor++
+	return token
+}
+
 func (p *parser) currentToken() *token {
 	return p.tokens[p.cursor]
 }
@@ -322,42 +328,98 @@ const (
 )
 
 type expression struct {
-	expressionKind expressionKind
-	unaryExpr      *unaryExpr
-	binaryOpExpr   *binaryOpExprNode
+	expr4 *expr4
 	node
 }
 
 func (p *parser) expression() (*expression, error) {
-	unaryExpr, err := p.unaryExpr()
+	expr4, err := p.expr4()
 	if err != nil {
-		return nil, fmt.Errorf("unaryExpr: %w", err)
+		return nil, fmt.Errorf("expr4: %w", err)
+	}
+	return &expression{expr4: expr4}, nil
+}
+
+// expr4 (+, -)
+//
+// 3 - 2 - 1 の木
+//
+//	expr4 <- isBinOp=true
+//	__expr4 <- isBinOp=true
+//	____expr5 val=3
+//	____expr5 val=2
+//	__expr5 val=1
+//
+// 3 の木
+//
+//	expr4 <- isBinOp=false
+//	__expr5 val=3
+type expr4 struct {
+	isBinOp  bool
+	expr5    *expr5
+	binExpr4 *binExpr4
+	node
+}
+
+type binExpr4 struct {
+	left4    *expr4
+	left     *expr5
+	operator *token
+	right    *expr5
+}
+
+func (p *parser) expr4() (*expr4, error) {
+	left, err := p.expr5()
+	if err != nil {
+		return nil, fmt.Errorf("expr5: %w", err)
 	}
 
-	expr := &expression{unaryExpr: unaryExpr, expressionKind: EXPRESSION_KIND_UNARY_EXPRESSION}
-	for p.currentToken().kind == TK_BINARY_OPERATOR {
-		operator := p.currentToken()
-		p.cursor++
+	if !p.isBinOp4() {
+		return &expr4{isBinOp: false, expr5: left}, nil
+	}
 
-		right, err := p.expression()
+	expr := &expr4{
+		isBinOp: false,
+		expr5:   left,
+	}
+
+	for p.isBinOp4() {
+		operator := p.consumeToken()
+
+		right, err := p.expr5()
 		if err != nil {
-			return nil, fmt.Errorf("expression: %w", err)
+			return nil, fmt.Errorf("expr5: %w", err)
 		}
 
-		expr = &expression{
-			binaryOpExpr:   &binaryOpExprNode{operator: operator, left: expr, right: right},
-			expressionKind: EXPRESSION_KIND_BINARY_OP_EXPRESSION,
+		expr = &expr4{
+			isBinOp: true,
+			binExpr4: &binExpr4{
+				left4:    expr,
+				operator: operator,
+				right:    right,
+			},
 		}
 	}
 
 	return expr, nil
 }
 
-type binaryOpExprNode struct {
-	operator *token
-	left     *expression
-	right    *expression
+func (p *parser) isBinOp4() bool {
+	return p.isCurrentTokenKind(TK_BINARY_OPERATOR) &&
+		(p.currentToken().value == "+" || p.currentToken().value == "-")
+}
+
+type expr5 struct {
+	unaryExpr *unaryExpr
 	node
+}
+
+func (p *parser) expr5() (*expr5, error) {
+	unaryExpr, err := p.unaryExpr()
+	if err != nil {
+		return nil, fmt.Errorf("unaryExpr: %w", err)
+	}
+	return &expr5{unaryExpr: unaryExpr}, nil
 }
 
 type unaryExpr struct {

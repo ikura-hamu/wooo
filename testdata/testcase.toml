@@ -55,3 +55,39 @@ js = 'stdout.js'
 stdout = '''
 6
 '''
+
+[[test]]
+name = "引き算"
+source = '''
+func Run() int {
+	return 3 - 1
+}
+'''
+js = 'stdout.js'
+stdout = '''
+2
+'''
+
+[[test]]
+name = "引き算3つ"
+source = '''
+func Run() int {
+	return 3 - 2 - 1
+}
+'''
+js = 'stdout.js'
+stdout = '''
+0
+'''
+
+[[test]]
+name = "足し算と引き算"
+source = '''
+func Run() int {
+	return 3 - 2 + 1 - 1
+}
+'''
+js = 'stdout.js'
+stdout = '''
+1
+'''

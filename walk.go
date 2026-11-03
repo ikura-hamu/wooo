@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type postVisit func() error
 
@@ -74,21 +76,31 @@ func walk(v visitor, n node) (err error) {
 			return fmt.Errorf("walk expressionList expression: %w", err)
 		}
 	case *expression:
-		if n.expressionKind == EXPRESSION_KIND_BINARY_OP_EXPRESSION {
-			if err := walk(v, n.binaryOpExpr); err != nil {
-				return fmt.Errorf("walk expression binaryOpExpr: %w", err)
+		if err := walk(v, n.expr4); err != nil {
+			return fmt.Errorf("walk expression expr4: %w", err)
+		}
+	case *expr4:
+		if n.isBinOp {
+			if n.binExpr4.left != nil {
+				if err := walk(v, n.binExpr4.left); err != nil {
+					return fmt.Errorf("walk expr4 binExpr4.left: %w", err)
+				}
+			} else {
+				if err := walk(v, n.binExpr4.left4); err != nil {
+					return fmt.Errorf("walk expr4 binExpr4.left4: %w", err)
+				}
+			}
+			if err := walk(v, n.binExpr4.right); err != nil {
+				return fmt.Errorf("walk expr4 binExpr4.right: %w", err)
 			}
 		} else {
-			if err := walk(v, n.unaryExpr); err != nil {
-				return fmt.Errorf("walk expression unaryExpr: %w", err)
+			if err := walk(v, n.expr5); err != nil {
+				return fmt.Errorf("walk expr4 expr5: %w", err)
 			}
 		}
-	case *binaryOpExprNode:
-		if err := walk(v, n.left); err != nil {
-			return fmt.Errorf("walk binaryOpExprNode left: %w", err)
-		}
-		if err := walk(v, n.right); err != nil {
-			return fmt.Errorf("walk binaryOpExprNode right: %w", err)
+	case *expr5:
+		if err := walk(v, n.unaryExpr); err != nil {
+			return fmt.Errorf("walk expr5 unaryExpr: %w", err)
 		}
 	case *unaryExpr:
 		if err := walk(v, n.primaryExpr); err != nil {

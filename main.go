@@ -20,6 +20,8 @@ func main() {
 		panic(err)
 	}
 
+	// dump(ast)
+
 	v := &codegenVisitor{}
 	if err := walk(v, ast); err != nil {
 		panic(err)

@@ -25,15 +25,21 @@ func (v *codegenVisitor) visit(n node) (visitor, postVisit, error) {
 			fmt.Printf(")\n")
 			return nil
 		}, nil
-	case *binaryOpExprNode:
+	case *expr4:
 		return v, func() error {
-			if n.operator.value == "+" {
-				fmt.Printf("i32.add\n")
-			} else {
-				return fmt.Errorf("unknown binary operetor: %v", n.operator.value)
+			if n.isBinOp {
+				switch n.binExpr4.operator.value {
+				case "+":
+					fmt.Printf("i32.add\n")
+				case "-":
+					fmt.Printf("i32.sub\n")
+				default:
+					return fmt.Errorf("unknown binary operetor: %v", n.binExpr4.operator.value)
+				}
 			}
 			return nil
 		}, nil
+
 	case *intLit:
 		fmt.Printf("i32.const %d\n", n.n)
 		return v, nil, nil
