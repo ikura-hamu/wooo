@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type codegenVisitor struct{}
 
@@ -25,21 +27,24 @@ func (v *codegenVisitor) visit(n node) (visitor, postVisit, error) {
 			fmt.Printf(")\n")
 			return nil
 		}, nil
-	case *expr4:
+	case *expression:
 		return v, func() error {
-			if n.isBinOp {
-				switch n.binExpr4.operator.value {
-				case "+":
+			if n.isBinary {
+				if n.binExpr.binaryOp.value == "+" {
 					fmt.Printf("i32.add\n")
-				case "-":
+				}
+				if n.binExpr.binaryOp.value == "-" {
 					fmt.Printf("i32.sub\n")
-				default:
-					return fmt.Errorf("unknown binary operetor: %v", n.binExpr4.operator.value)
+				}
+				if n.binExpr.binaryOp.value == "*" {
+					fmt.Printf("i32.mul\n")
+				}
+				if n.binExpr.binaryOp.value == "/" {
+					fmt.Printf("i32.div_s\n") // TODO: unsigned に対応
 				}
 			}
 			return nil
 		}, nil
-
 	case *intLit:
 		fmt.Printf("i32.const %d\n", n.n)
 		return v, nil, nil

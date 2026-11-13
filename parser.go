@@ -328,98 +328,101 @@ const (
 )
 
 type expression struct {
-	expr4 *expr4
+	isBinary  bool
+	unaryExpr *unaryExpr
+	binExpr   *binExpr
 	node
+}
+
+type binExpr struct {
+	lhs      *expression
+	binaryOp *token
+	rhs      *expression
 }
 
 func (p *parser) expression() (*expression, error) {
-	expr4, err := p.expr4()
+	lhs, err := p.unaryExpr()
 	if err != nil {
-		return nil, fmt.Errorf("expr4: %w", err)
-	}
-	return &expression{expr4: expr4}, nil
-}
-
-// expr4 (+, -)
-//
-// 3 - 2 - 1 の木
-//
-//	expr4 <- isBinOp=true
-//	__expr4 <- isBinOp=true
-//	____expr5 val=3
-//	____expr5 val=2
-//	__expr5 val=1
-//
-// 3 の木
-//
-//	expr4 <- isBinOp=false
-//	__expr5 val=3
-type expr4 struct {
-	isBinOp  bool
-	expr5    *expr5
-	binExpr4 *binExpr4
-	node
-}
-
-type binExpr4 struct {
-	left4    *expr4
-	left     *expr5
-	operator *token
-	right    *expr5
-}
-
-func (p *parser) expr4() (*expr4, error) {
-	left, err := p.expr5()
-	if err != nil {
-		return nil, fmt.Errorf("expr5: %w", err)
+		return nil, fmt.Errorf("unary expr: %w", err)
 	}
 
-	if !p.isBinOp4() {
-		return &expr4{isBinOp: false, expr5: left}, nil
+	e := &expression{
+		unaryExpr: lhs,
 	}
 
-	expr := &expr4{
-		isBinOp: false,
-		expr5:   left,
-	}
+	for p.isBinOperator() {
+		binaryOp := p.consumeToken()
 
-	for p.isBinOp4() {
-		operator := p.consumeToken()
-
-		right, err := p.expr5()
+		rhs, err := p.unaryExpr()
 		if err != nil {
-			return nil, fmt.Errorf("expr5: %w", err)
+			return nil, fmt.Errorf("unary expr: %w", err)
 		}
 
-		expr = &expr4{
-			isBinOp: true,
-			binExpr4: &binExpr4{
-				left4:    expr,
-				operator: operator,
-				right:    right,
-			},
+		if !e.isBinary {
+			e.binExpr = &binExpr{
+				lhs:      &expression{unaryExpr: lhs},
+				binaryOp: binaryOp,
+				rhs:      &expression{unaryExpr: rhs},
+			}
+			e.unaryExpr = nil
+		} else {
+			newBinOpStrength := binOpStrength[binaryOp.value]
+			eBinOpStrength := binOpStrength[e.binExpr.binaryOp.value]
+
+			if eBinOpStrength >= newBinOpStrength {
+				e.binExpr = &binExpr{
+					lhs: &expression{
+						isBinary: true,
+						binExpr: &binExpr{
+							lhs:      e.binExpr.lhs,
+							binaryOp: e.binExpr.binaryOp,
+							rhs:      e.binExpr.rhs,
+						},
+					},
+					binaryOp: binaryOp,
+					rhs:      &expression{unaryExpr: rhs},
+				}
+			} else {
+				e.binExpr = &binExpr{
+					lhs:      e.binExpr.lhs,
+					binaryOp: e.binExpr.binaryOp,
+					rhs: &expression{
+						isBinary: true,
+						binExpr: &binExpr{
+							lhs:      e.binExpr.rhs,
+							binaryOp: binaryOp,
+							rhs:      &expression{unaryExpr: rhs},
+						},
+					},
+				}
+			}
+			e.unaryExpr = nil
 		}
+		e.isBinary = true
 	}
 
-	return expr, nil
+	return e, nil
 }
 
-func (p *parser) isBinOp4() bool {
-	return p.isCurrentTokenKind(TK_BINARY_OPERATOR) &&
-		(p.currentToken().value == "+" || p.currentToken().value == "-")
+var binOpStrength map[string]int = map[string]int{
+	"+": 4,
+	"-": 4,
+	"*": 5,
+	"/": 5,
 }
 
-type expr5 struct {
-	unaryExpr *unaryExpr
-	node
-}
-
-func (p *parser) expr5() (*expr5, error) {
-	unaryExpr, err := p.unaryExpr()
-	if err != nil {
-		return nil, fmt.Errorf("unaryExpr: %w", err)
+func (p *parser) isBinOperator() bool {
+	if !p.isCurrentTokenKind(TK_BINARY_OPERATOR) {
+		return false
 	}
-	return &expr5{unaryExpr: unaryExpr}, nil
+	v := p.currentToken().value
+
+	switch v {
+	case "+", "-", "*", "/":
+		return true
+	default:
+		return false
+	}
 }
 
 type unaryExpr struct {
@@ -482,7 +485,7 @@ type basicLit struct {
 func (p *parser) basicLit() (*basicLit, error) {
 	intL, err := p.intLit()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("intLit: %w", err)
 	}
 	return &basicLit{intLit: intL}, nil
 }

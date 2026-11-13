@@ -89,22 +89,17 @@ PrimaryExpr
   = Operand;
 
 (* ### Operators *)
-(* Expression は仕様で左再帰で定義されており、パースが難しいため、演算子の優先度ごとにノードを定義する。
-  数字が大きいほど2項演算子の優先度が高い。
+(* Expression は仕様で左再帰で定義されており、パースが難しいため、ループの形に置き換える。
   本当は
   Expression = UnaryExpr | Expression binary_op Expression .
+
+  また、二項演算には優先順位があるが、これはパースするときにうまく比較して構文木を作る。
 *)
 Expression
-  = Expr_4;
+  = UnaryExpr, { binary_op, UnaryExpr };
 
-Expr_4
-  = Expr_5, { add_op, Expr_5 };
-
-Expr_5
-  = UnaryExpr;
-
-add_op
-  = "+" | "-";
+binary_op
+  = "+" | "-" | "*" | "/";
 
 UnaryExpr
   = PrimaryExpr;

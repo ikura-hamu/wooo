@@ -20,7 +20,7 @@ func main() {
 		panic(err)
 	}
 
-	// dump(ast)
+	dump(ast)
 
 	v := &codegenVisitor{}
 	if err := walk(v, ast); err != nil {

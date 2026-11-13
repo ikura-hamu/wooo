@@ -91,3 +91,75 @@ js = 'stdout.js'
 stdout = '''
 1
 '''
+
+[[test]]
+name = "掛け算"
+source = '''
+func Run() int {
+	return 3 * 2
+}
+'''
+js = 'stdout.js'
+stdout = '''
+6
+'''
+
+[[test]]
+name = "掛け算3つ"
+source = '''
+func Run() int {
+	return 3 * 2 * 4
+}
+'''
+js = 'stdout.js'
+stdout = '''
+24
+'''
+
+[[test]]
+name = "掛け算と足し算"
+source = '''
+func Run() int {
+	return 3 * 2 + 1
+}
+'''
+js = 'stdout.js'
+stdout = '''
+7
+'''
+
+[[test]]
+name = "掛け算と足し算 2"
+source = '''
+func Run() int {
+	return 3 + 2 * 4
+}
+'''
+js = 'stdout.js'
+stdout = '''
+11
+'''
+
+[[test]]
+name = "割り算"
+source = '''
+func Run() int {
+	return 8 / 2
+}
+'''
+js = 'stdout.js'
+stdout = '''
+4
+'''
+
+[[test]]
+name = "複雑な四則演算"
+source = '''
+func Run() int {
+	return 1 + 2 * 3 / 4 - 2
+}
+'''
+js = 'stdout.js'
+stdout = '''
+0
+'''
