@@ -163,3 +163,15 @@ js = 'stdout.js'
 stdout = '''
 0
 '''
+
+[[test]]
+name = "複雑な四則演算2"
+source = '''
+func Run() int {
+	return 3 * 2 + 8 / 4 - 2
+}
+'''
+js = 'stdout.js'
+stdout = '''
+6
+'''
