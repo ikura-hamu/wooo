@@ -247,7 +247,8 @@ func mustInsertSemicolon(tokens []*token, input string, start int) bool {
 	return lastToken.kind == TK_IDENT ||
 		lastToken.kind == TK_INT ||
 		lastToken.kind == TK_RETURN ||
-		lastToken.kind == TK_PUNCTUATION && lastToken.value == "}"
+		lastToken.kind == TK_PUNCTUATION && lastToken.value == "}" ||
+		lastToken.kind == TK_PUNCTUATION && lastToken.value == ")"
 }
 
 func tokenize(fileName string, input string) ([]*token, error) {

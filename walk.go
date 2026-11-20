@@ -99,8 +99,17 @@ func walk(v visitor, n node) (err error) {
 			return fmt.Errorf("walk primaryExpr operand: %w", err)
 		}
 	case *operand:
-		if err := walk(v, n.literal); err != nil {
-			return fmt.Errorf("walk operand literal: %w", err)
+		switch n.kind {
+		case OPERAND_KIND_LITERAL:
+			if err := walk(v, n.literal); err != nil {
+				return fmt.Errorf("walk operand literal: %w", err)
+			}
+		case OPERAND_KIND_EXPRESSION_WITH_PARENTHESES:
+			if err := walk(v, n.expression); err != nil {
+				return fmt.Errorf("walk operand expression: %w", err)
+			}
+		default:
+			return fmt.Errorf("unknown operand kind: %v", n.kind)
 		}
 	case *literal:
 		if err := walk(v, n.basicLit); err != nil {

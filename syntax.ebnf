@@ -76,7 +76,7 @@ ExpressionList
 (* ## Expressions *)
 (* ### Operands *)
 Operand
-  = Literal;
+  = Literal | "(", Expression, ")";
 
 Literal
   = BasicLit;

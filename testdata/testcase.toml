@@ -175,3 +175,27 @@ js = 'stdout.js'
 stdout = '''
 6
 '''
+
+[[test]]
+name = "かっこのある四則演算"
+source = """
+func Run() int {
+	return (1 + 2) * 3
+}
+"""
+js = 'stdout.js'
+stdout = '''
+9
+'''
+
+[[test]]
+name = "かっこのある四則演算2"
+source = """
+func Run() int {
+	return (3 * 2) + (4 - 1)
+}
+"""
+js = 'stdout.js'
+stdout = '''
+9
+'''

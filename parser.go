@@ -32,7 +32,7 @@ func (p *parser) isCurrentTokenKind(kind tokenKind) bool {
 	return p.currentToken().kind == kind
 }
 
-func (p *parser) expectOpPunc(op string) error {
+func (p *parser) expectPunctuation(op string) error {
 	if p.currentToken().kind != TK_PUNCTUATION || p.currentToken().value != op {
 		return fmt.Errorf("expected %q, got %q at cursor %d", op, p.currentToken().value, p.cursor)
 	}
@@ -70,7 +70,7 @@ func (p *parser) sourceFile() (*sourceFile, error) {
 		}
 		toplevelDecls = append(toplevelDecls, decl)
 
-		if err := p.expectOpPunc(";"); err != nil {
+		if err := p.expectPunctuation(";"); err != nil {
 			return nil, fmt.Errorf("expect ';': %w", err)
 		}
 	}
@@ -221,7 +221,7 @@ type block struct {
 }
 
 func (p *parser) block() (*block, error) {
-	if err := p.expectOpPunc("{"); err != nil {
+	if err := p.expectPunctuation("{"); err != nil {
 		return nil, fmt.Errorf("expected '{': %w", err)
 	}
 
@@ -230,7 +230,7 @@ func (p *parser) block() (*block, error) {
 		return nil, fmt.Errorf("statementList: %w", err)
 	}
 
-	if err := p.expectOpPunc("}"); err != nil {
+	if err := p.expectPunctuation("}"); err != nil {
 		return nil, fmt.Errorf("expected '}': %w", err)
 	}
 
@@ -249,7 +249,7 @@ func (p *parser) statementList() (*statementList, error) {
 		if err != nil {
 			return nil, fmt.Errorf("statement: %w", err)
 		}
-		if err := p.expectOpPunc(";"); err != nil {
+		if err := p.expectPunctuation(";"); err != nil {
 			return nil, fmt.Errorf("expected ';': %w", err)
 		}
 		statements = append(statements, statement)
@@ -451,17 +451,46 @@ func (p *parser) primaryExpr() (*primaryExpr, error) {
 	return &primaryExpr{operand: operand}, nil
 }
 
+type operandKind int
+
+const (
+	OPERAND_KIND_LITERAL operandKind = iota + 1
+	OPERAND_KIND_EXPRESSION_WITH_PARENTHESES
+)
+
 type operand struct {
-	literal *literal
+	kind       operandKind
+	literal    *literal
+	expression *expression
 	node
 }
 
 func (p *parser) operand() (*operand, error) {
+	if p.currentToken().kind == TK_PUNCTUATION && p.currentToken().value == "(" {
+		if err := p.expectPunctuation("("); err != nil {
+			return nil, fmt.Errorf("expect punctuation: %w", err)
+		}
+
+		expr, err := p.expression()
+		if err != nil {
+			return nil, fmt.Errorf("exprettion: %w", err)
+		}
+
+		if err := p.expectPunctuation(")"); err != nil {
+			return nil, fmt.Errorf("expect punctuation: %w", err)
+		}
+
+		return &operand{
+			kind:       OPERAND_KIND_EXPRESSION_WITH_PARENTHESES,
+			expression: expr,
+		}, nil
+	}
+
 	literal, err := p.literal()
 	if err != nil {
 		return nil, fmt.Errorf("literal: %w", err)
 	}
-	return &operand{literal: literal}, nil
+	return &operand{kind: OPERAND_KIND_LITERAL, literal: literal}, nil
 }
 
 type literal struct {
