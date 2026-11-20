@@ -91,8 +91,17 @@ func walk(v visitor, n node) (err error) {
 			}
 		}
 	case *unaryExpr:
-		if err := walk(v, n.primaryExpr); err != nil {
-			return fmt.Errorf("walk unaryExpr primaryExpr: %w", err)
+		switch n.kind {
+		case UNARY_EXPR_KIND_PRIMARY:
+			if err := walk(v, n.primaryExpr); err != nil {
+				return fmt.Errorf("walk unaryExpr primaryExpr: %w", err)
+			}
+		case UNARY_EXPR_KIND_WITH_UNARY_OP:
+			if err := walk(v, n.withUnaryOp.unaryExpr); err != nil {
+				return fmt.Errorf("walk unaryExpr withUnaryOp: %w", err)
+			}
+		default:
+			return fmt.Errorf("unknown unaryExpr kind: %v", n.kind)
 		}
 	case *primaryExpr:
 		if err := walk(v, n.operand); err != nil {

@@ -412,7 +412,7 @@ var binOpStrength map[string]int = map[string]int{
 }
 
 func (p *parser) isBinOperator() bool {
-	if !p.isCurrentTokenKind(TK_BINARY_OPERATOR) {
+	if !p.isCurrentTokenKind(TK_OPERATOR) {
 		return false
 	}
 	v := p.currentToken().value
@@ -425,17 +425,64 @@ func (p *parser) isBinOperator() bool {
 	}
 }
 
+func (p *parser) isUnaryOperator() bool {
+	if !p.isCurrentTokenKind(TK_OPERATOR) {
+		return false
+	}
+	v := p.currentToken().value
+
+	switch v {
+	case "+", "-":
+		return true
+	default:
+		return false
+	}
+}
+
+type unaryExprKind int
+
+const (
+	UNARY_EXPR_KIND_PRIMARY unaryExprKind = iota
+	UNARY_EXPR_KIND_WITH_UNARY_OP
+)
+
 type unaryExpr struct {
+	kind        unaryExprKind
 	primaryExpr *primaryExpr
+	withUnaryOp *unaryExprWithUnaryOp
 	node
 }
 
+type unaryExprWithUnaryOp struct {
+	operator  string
+	unaryExpr *unaryExpr
+}
+
 func (p *parser) unaryExpr() (*unaryExpr, error) {
+	if p.isUnaryOperator() {
+		op := p.consumeToken()
+		operand, err := p.unaryExpr()
+		if err != nil {
+			return nil, fmt.Errorf("unary expr: %w", err)
+		}
+
+		return &unaryExpr{
+			kind: UNARY_EXPR_KIND_WITH_UNARY_OP,
+			withUnaryOp: &unaryExprWithUnaryOp{
+				operator:  op.value,
+				unaryExpr: operand,
+			},
+		}, nil
+	}
+
 	primaryExpr, err := p.primaryExpr()
 	if err != nil {
 		return nil, fmt.Errorf("primaryExpr: %w", err)
 	}
-	return &unaryExpr{primaryExpr: primaryExpr}, nil
+	return &unaryExpr{
+		kind:        UNARY_EXPR_KIND_PRIMARY,
+		primaryExpr: primaryExpr,
+	}, nil
 }
 
 type primaryExpr struct {

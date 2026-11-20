@@ -199,3 +199,63 @@ js = 'stdout.js'
 stdout = '''
 9
 '''
+
+[[test]]
+name = "単項演算子"
+source = """
+func Run() int {
+	return -1
+}
+"""
+js = 'stdout.js'
+stdout = '''
+-1
+'''
+
+[[test]]
+name = "単項演算子2"
+source = """
+func Run() int {
+	return +1
+}
+"""
+js = 'stdout.js'
+stdout = '''
+1
+'''
+
+[[test]]
+name = "単項演算子3"
+source = """
+func Run() int {
+	return -1 - 2 - -3
+}
+"""
+js = 'stdout.js'
+stdout = '''
+0
+'''
+
+[[test]]
+name = "単項演算子4"
+source = """
+func Run() int {
+	return -1 - 2 - +3
+}
+"""
+js = 'stdout.js'
+stdout = '''
+-6
+'''
+
+[[test]]
+name = "単項演算子5"
+source = """
+func Run() int {
+	return -1 - 2 - -+3
+}
+"""
+js = 'stdout.js'
+stdout = '''
+0
+'''

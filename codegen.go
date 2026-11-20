@@ -58,6 +58,32 @@ func (v *codegenVisitor) visit(n node) (visitor, postVisit, error) {
 			}
 			return nil
 		}, nil
+	case *unaryExpr:
+		if n.kind == UNARY_EXPR_KIND_WITH_UNARY_OP {
+			switch n.withUnaryOp.operator {
+			case "+":
+				v.incrementIndent()
+				v.emitf("(i32.add\n")
+
+				v.incrementIndent()
+				v.emitf("(i32.const 0)\n")
+				v.decrementIndent()
+			case "-":
+				v.incrementIndent()
+				v.emitf("(i32.sub\n")
+
+				v.incrementIndent()
+				v.emitf("(i32.const 0)\n")
+				v.decrementIndent()
+			}
+
+			return v, func() error {
+				v.emitf(")\n")
+				v.decrementIndent()
+				return nil
+			}, nil
+		}
+		return v, nil, nil
 	case *intLit:
 		v.incrementIndent()
 		v.emitf("(i32.const %d)\n", n.n)

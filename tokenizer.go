@@ -18,8 +18,8 @@ const (
 	TK_IDENT
 	// 区切り記号
 	TK_PUNCTUATION
-	// 二項演算子
-	TK_BINARY_OPERATOR
+	// 演算子
+	TK_OPERATOR
 	// ファイルの終わり
 	TK_EOF
 )
@@ -217,7 +217,7 @@ func tokenizeBinaryOperators(fileName string, input string, start int) (*token, 
 		end := start + len(op)
 		if input[start:end] == op {
 			return &token{
-				kind:  TK_BINARY_OPERATOR,
+				kind:  TK_OPERATOR,
 				value: op,
 				pos: &pos{
 					fileName: fileName,
