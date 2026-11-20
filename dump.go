@@ -21,7 +21,7 @@ type dumper struct { // nolint:unused
 }
 
 func (d *dumper) visit(n node) (visitor, postVisit, error) { // nolint:unused
-	_, err := fmt.Fprintf(d.w, strings.Repeat(". ", d.indentLevel)+" %T: %+v\n", n, n)
+	_, err := fmt.Fprintf(d.w, strings.Repeat(". ", d.indentLevel)+"%d %T: %+v\n", n.id(), n, n)
 	if err != nil {
 		return nil, nil, fmt.Errorf("fprintf: %w", err)
 	}

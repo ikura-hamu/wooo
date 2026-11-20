@@ -7,11 +7,27 @@ import (
 
 type node interface {
 	_node()
+	id() int
 }
 
 type parser struct {
-	tokens []*token
-	cursor int
+	tokens     []*token
+	cursor     int
+	lastNodeID int
+}
+
+type nodeData struct {
+	nodeID int
+	node
+}
+
+func (n *nodeData) id() int {
+	return n.nodeID
+}
+
+func (p *parser) nodeData() *nodeData {
+	p.lastNodeID++
+	return &nodeData{nodeID: p.lastNodeID}
 }
 
 func (p *parser) consumeToken() *token {
@@ -75,7 +91,7 @@ func (p *parser) sourceFile() (*sourceFile, error) {
 		}
 	}
 
-	return &sourceFile{toplevelDecls: toplevelDecls}, nil
+	return &sourceFile{toplevelDecls: toplevelDecls, node: p.nodeData()}, nil
 }
 
 type topLevelDecl struct {
@@ -89,7 +105,7 @@ func (p *parser) topLevelDecl() (*topLevelDecl, error) {
 		if err != nil {
 			return nil, fmt.Errorf("functionDecl: %w", err)
 		}
-		return &topLevelDecl{functionDecl: funcDeclNode}, nil
+		return &topLevelDecl{functionDecl: funcDeclNode, node: p.nodeData()}, nil
 	}
 
 	return nil, fmt.Errorf("unexpected token")
@@ -119,7 +135,7 @@ func (p *parser) functionDecl() (*functionDecl, error) {
 	}
 
 	if ok := p.isPunctuation("{"); !ok {
-		return &functionDecl{name: name, signature: signature}, nil
+		return &functionDecl{name: name, signature: signature, node: p.nodeData()}, nil
 	}
 
 	block, err := p.block()
@@ -127,7 +143,7 @@ func (p *parser) functionDecl() (*functionDecl, error) {
 		return nil, err
 	}
 
-	return &functionDecl{name: name, signature: signature, body: block}, nil
+	return &functionDecl{name: name, signature: signature, body: block, node: p.nodeData()}, nil
 }
 
 type signature struct {
@@ -150,7 +166,7 @@ func (p *parser) signature() (*signature, error) {
 		}
 	}
 
-	return &signature{parameters: parameters, result: result}, nil
+	return &signature{parameters: parameters, result: result, node: p.nodeData()}, nil
 }
 
 type parameters struct {
@@ -159,7 +175,7 @@ type parameters struct {
 
 func (p *parser) parameters() (*parameters, error) {
 	p.cursor += 2
-	return &parameters{}, nil
+	return &parameters{node: p.nodeData()}, nil
 }
 
 type resultKind int
@@ -173,6 +189,7 @@ type result struct {
 	kind       resultKind
 	parameters *parameters
 	typ        *typeNode
+	node
 }
 
 func (p *parser) result() (*result, error) {
@@ -181,14 +198,14 @@ func (p *parser) result() (*result, error) {
 		if err != nil {
 			return nil, fmt.Errorf("parameters: %w", err)
 		}
-		return &result{kind: RESULT_PARAMETERS, parameters: parameters}, nil
+		return &result{kind: RESULT_PARAMETERS, parameters: parameters, node: p.nodeData()}, nil
 	}
 
 	typ, err := p.typeNode()
 	if err != nil {
 		return nil, fmt.Errorf("typeNode: %w", err)
 	}
-	return &result{kind: RESULT_TYPE, typ: typ}, nil
+	return &result{kind: RESULT_TYPE, typ: typ, node: p.nodeData()}, nil
 }
 
 type typeNode struct {
@@ -234,7 +251,7 @@ func (p *parser) block() (*block, error) {
 		return nil, fmt.Errorf("expected '}': %w", err)
 	}
 
-	return &block{statementList: statementList}, nil
+	return &block{statementList: statementList, node: p.nodeData()}, nil
 }
 
 type statementList struct {
@@ -255,7 +272,7 @@ func (p *parser) statementList() (*statementList, error) {
 		statements = append(statements, statement)
 	}
 
-	return &statementList{statements: statements}, nil
+	return &statementList{statements: statements, node: p.nodeData()}, nil
 }
 
 func (p *parser) statement() (*statement, error) {
@@ -267,6 +284,7 @@ func (p *parser) statement() (*statement, error) {
 		return &statement{
 			statementKind:   STATEMENT_RETURN,
 			returnStatement: returnStatement,
+			node:            p.nodeData(),
 		}, nil
 	}
 
@@ -296,7 +314,7 @@ func (p *parser) returnStatement() (*returnStatement, error) {
 	}
 
 	if p.isPunctuation(";") {
-		return &returnStatement{}, nil
+		return &returnStatement{node: p.nodeData()}, nil
 	}
 
 	expressions, err := p.expressionList()
@@ -304,7 +322,7 @@ func (p *parser) returnStatement() (*returnStatement, error) {
 		return nil, fmt.Errorf("expressionList: %w", err)
 	}
 
-	return &returnStatement{expressions: expressions}, nil
+	return &returnStatement{expressions: expressions, node: p.nodeData()}, nil
 }
 
 type expressionList struct {
@@ -317,7 +335,7 @@ func (p *parser) expressionList() (*expressionList, error) {
 	if err != nil {
 		return nil, fmt.Errorf("expression: %w", err)
 	}
-	return &expressionList{expression: exp}, nil
+	return &expressionList{expression: exp, node: p.nodeData()}, nil
 }
 
 type expressionKind int
@@ -348,6 +366,7 @@ func (p *parser) expression() (*expression, error) {
 
 	e := &expression{
 		unaryExpr: lhs,
+		node:      p.nodeData(),
 	}
 
 	for p.isBinOperator() {
@@ -360,9 +379,9 @@ func (p *parser) expression() (*expression, error) {
 
 		if !e.isBinary {
 			e.binExpr = &binExpr{
-				lhs:      &expression{unaryExpr: lhs},
+				lhs:      &expression{unaryExpr: lhs, node: p.nodeData()},
 				binaryOp: binaryOp,
-				rhs:      &expression{unaryExpr: rhs},
+				rhs:      &expression{unaryExpr: rhs, node: p.nodeData()},
 			}
 			e.unaryExpr = nil
 		} else {
@@ -378,9 +397,10 @@ func (p *parser) expression() (*expression, error) {
 							binaryOp: e.binExpr.binaryOp,
 							rhs:      e.binExpr.rhs,
 						},
+						node: p.nodeData(),
 					},
 					binaryOp: binaryOp,
-					rhs:      &expression{unaryExpr: rhs},
+					rhs:      &expression{unaryExpr: rhs, node: p.nodeData()},
 				}
 			} else {
 				e.binExpr = &binExpr{
@@ -391,8 +411,9 @@ func (p *parser) expression() (*expression, error) {
 						binExpr: &binExpr{
 							lhs:      e.binExpr.rhs,
 							binaryOp: binaryOp,
-							rhs:      &expression{unaryExpr: rhs},
+							rhs:      &expression{unaryExpr: rhs, node: p.nodeData()},
 						},
+						node: p.nodeData(),
 					},
 				}
 			}
@@ -472,6 +493,7 @@ func (p *parser) unaryExpr() (*unaryExpr, error) {
 				operator:  op.value,
 				unaryExpr: operand,
 			},
+			node: p.nodeData(),
 		}, nil
 	}
 
@@ -482,7 +504,7 @@ func (p *parser) unaryExpr() (*unaryExpr, error) {
 	return &unaryExpr{
 		kind:        UNARY_EXPR_KIND_PRIMARY,
 		primaryExpr: primaryExpr,
-	}, nil
+		node:        p.nodeData()}, nil
 }
 
 type primaryExpr struct {
@@ -495,7 +517,7 @@ func (p *parser) primaryExpr() (*primaryExpr, error) {
 	if err != nil {
 		return nil, fmt.Errorf("operand: %w", err)
 	}
-	return &primaryExpr{operand: operand}, nil
+	return &primaryExpr{operand: operand, node: p.nodeData()}, nil
 }
 
 type operandKind int
@@ -530,6 +552,7 @@ func (p *parser) operand() (*operand, error) {
 		return &operand{
 			kind:       OPERAND_KIND_EXPRESSION_WITH_PARENTHESES,
 			expression: expr,
+			node:       p.nodeData(),
 		}, nil
 	}
 
@@ -537,7 +560,7 @@ func (p *parser) operand() (*operand, error) {
 	if err != nil {
 		return nil, fmt.Errorf("literal: %w", err)
 	}
-	return &operand{kind: OPERAND_KIND_LITERAL, literal: literal}, nil
+	return &operand{kind: OPERAND_KIND_LITERAL, literal: literal, node: p.nodeData()}, nil
 }
 
 type literal struct {
@@ -550,7 +573,7 @@ func (p *parser) literal() (*literal, error) {
 	if err != nil {
 		return nil, fmt.Errorf("basicLit: %w", err)
 	}
-	return &literal{basicLit: bl}, nil
+	return &literal{basicLit: bl, node: p.nodeData()}, nil
 }
 
 type basicLit struct {
@@ -563,7 +586,7 @@ func (p *parser) basicLit() (*basicLit, error) {
 	if err != nil {
 		return nil, fmt.Errorf("intLit: %w", err)
 	}
-	return &basicLit{intLit: intL}, nil
+	return &basicLit{intLit: intL, node: p.nodeData()}, nil
 }
 
 type intLit struct {
@@ -577,7 +600,7 @@ func (p *parser) intLit() (*intLit, error) {
 		return nil, fmt.Errorf("parse int: %w", err)
 	}
 	p.cursor++
-	return &intLit{n: n}, nil
+	return &intLit{n: n, node: p.nodeData()}, nil
 }
 
 type identifier struct {
@@ -591,5 +614,5 @@ func (p *parser) identifier() (*identifier, error) {
 	}
 	name := p.currentToken().value
 	p.cursor++
-	return &identifier{name: name}, nil
+	return &identifier{name: name, node: p.nodeData()}, nil
 }

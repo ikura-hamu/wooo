@@ -44,10 +44,35 @@ func walk(v visitor, n node) (err error) {
 		if err := walk(v, n.name); err != nil {
 			return fmt.Errorf("walk functionDecl name: %w", err)
 		}
+		if err := walk(v, n.signature); err != nil {
+			return fmt.Errorf("walk functionDecl signature: %w", err)
+		}
 		if n.body != nil {
 			if err := walk(v, n.body); err != nil {
 				return fmt.Errorf("walk functionDecl body: %w", err)
 			}
+		}
+	case *signature:
+		if err := walk(v, n.parameters); err != nil {
+			return fmt.Errorf("walk signature parameters: %w", err)
+		}
+		if n.result != nil {
+			if err := walk(v, n.result); err != nil {
+				return fmt.Errorf("walk signature result: %w", err)
+			}
+		}
+	case *parameters:
+		break
+	case *result:
+		switch n.kind {
+		case RESULT_PARAMETERS:
+			if err := walk(v, n.parameters); err != nil {
+				return fmt.Errorf("walk result parameters: %w", err)
+			}
+		case RESULT_TYPE:
+			break
+		default:
+			return fmt.Errorf("unkown walk result kind: %v", err)
 		}
 	case *block:
 		if err := walk(v, n.statementList); err != nil {
