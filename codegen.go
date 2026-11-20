@@ -2,56 +2,81 @@ package main
 
 import (
 	"fmt"
+	"strings"
 )
 
-type codegenVisitor struct{}
+type codegenVisitor struct {
+	indentLevel int
+}
 
 func (v *codegenVisitor) visit(n node) (visitor, postVisit, error) {
 	switch n := n.(type) {
 	case *sourceFile:
-		fmt.Printf("(module\n")
+		v.emitf("(module\n")
 		return v, func() error {
-			fmt.Printf(")\n")
+			v.emitf(")\n")
 			return nil
 		}, nil
 	case *functionDecl:
-		fmt.Printf("(export %q (func $%s))\n", n.name.name, n.name.name)
-		fmt.Printf("(func $%s ", n.name.name)
+		v.incrementIndent()
+		v.emitf("(export %q (func $%s))\n", n.name.name, n.name.name)
+		v.decrementIndent()
+
+		v.incrementIndent()
+		v.emitf("(func $%s ", n.name.name)
 		if n.signature.result != nil {
-			fmt.Printf("(result i32)\n") // TODO 正しい型
+			v.emitf("(result i32)\n") // TODO 正しい型
 		} else {
 			fmt.Println()
 		}
 
 		return v, func() error {
-			fmt.Printf(")\n")
+			v.emitf(")\n")
+			v.decrementIndent()
 			return nil
 		}, nil
 	case *expression:
 		if n.isBinary {
+			v.incrementIndent()
 			if n.binExpr.binaryOp.value == "+" {
-				fmt.Printf("(i32.add\n")
+				v.emitf("(i32.add\n")
 			}
 			if n.binExpr.binaryOp.value == "-" {
-				fmt.Printf("(i32.sub\n")
+				v.emitf("(i32.sub\n")
 			}
 			if n.binExpr.binaryOp.value == "*" {
-				fmt.Printf("(i32.mul\n")
+				v.emitf("(i32.mul\n")
 			}
 			if n.binExpr.binaryOp.value == "/" {
-				fmt.Printf("(i32.div_s\n") // TODO: unsigned に対応
+				v.emitf("(i32.div_s\n") // TODO: unsigned に対応
 			}
 		}
 		return v, func() error {
 			if n.isBinary {
-				fmt.Printf(")\n")
+				v.emitf(")\n")
+				v.decrementIndent()
 			}
 			return nil
 		}, nil
 	case *intLit:
-		fmt.Printf("(i32.const %d)\n", n.n)
+		v.incrementIndent()
+		v.emitf("(i32.const %d)\n", n.n)
+		v.decrementIndent()
 		return v, nil, nil
 	default:
 		return v, nil, nil
 	}
+}
+
+func (v *codegenVisitor) emitf(format string, args ...any) {
+	fmt.Print(strings.Repeat("\t", v.indentLevel))
+	fmt.Printf(format, args...)
+}
+
+func (v *codegenVisitor) incrementIndent() {
+	v.indentLevel++
+}
+
+func (v *codegenVisitor) decrementIndent() {
+	v.indentLevel--
 }
