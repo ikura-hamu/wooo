@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"strings"
 )
 
 type codegenVisitor struct {
 	indentLevel int
+	w           io.Writer
 }
 
 func (v *codegenVisitor) visit(n node) (visitor, postVisit, error) {
@@ -106,8 +108,8 @@ func (v *codegenVisitor) visit(n node) (visitor, postVisit, error) {
 }
 
 func (v *codegenVisitor) emitf(format string, args ...any) {
-	fmt.Print(strings.Repeat("\t", v.indentLevel))
-	fmt.Printf(format, args...)
+	fmt.Fprint(v.w, strings.Repeat("\t", v.indentLevel))
+	fmt.Fprintf(v.w, format, args...)
 }
 
 func (v *codegenVisitor) incrementIndent() {

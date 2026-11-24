@@ -1,8 +1,33 @@
 package main
 
 import (
+	"fmt"
+	"io"
 	"os"
 )
+
+func CompileBytes(w io.Writer, fileName string, data []byte, dumpAst bool) error {
+	tokens, err := tokenize(fileName, string(data))
+	if err != nil {
+		return fmt.Errorf("tokenize: %w", err)
+	}
+
+	ast, err := parse(tokens)
+	if err != nil {
+		return fmt.Errorf("parse: %w", err)
+	}
+
+	if dumpAst {
+		dump(ast)
+	}
+
+	v := &codegenVisitor{w: w}
+	if err := walk(v, ast); err != nil {
+		return fmt.Errorf("codegen: %w", err)
+	}
+
+	return nil
+}
 
 func main() {
 	fileName := os.Args[1]
@@ -10,20 +35,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	tokens, err := tokenize(fileName, string(input))
+
+	err = CompileBytes(os.Stdout, fileName, input, true)
 	if err != nil {
-		panic(err)
-	}
-
-	ast, err := parse(tokens)
-	if err != nil {
-		panic(err)
-	}
-
-	dump(ast)
-
-	v := &codegenVisitor{}
-	if err := walk(v, ast); err != nil {
 		panic(err)
 	}
 }

@@ -1,10 +1,8 @@
-package main_test
+package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -13,27 +11,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 )
-
-func checkExecExist(name string) {
-	_, err := exec.LookPath(name)
-	if err != nil {
-		log.Fatalf("command not found: %s", name)
-	}
-}
-
-func TestMain(m *testing.M) {
-	checkExecExist("go")
-	checkExecExist("wat2wasm")
-	checkExecExist("node")
-
-	buildCmd := exec.Command("go", "build", "-o", "wooo", ".")
-	err := buildCmd.Run()
-	if err != nil {
-		log.Fatalf("build wooo: %v", err)
-	}
-
-	m.Run()
-}
 
 type testCase struct {
 	Name   *string
@@ -115,13 +92,6 @@ func execWooo(t *testing.T, testNumber int, tempDirName string, source string) (
 
 	testGoFilePath := path.Join(tempDirName, fmt.Sprintf("%d.go", testNumber))
 
-	err := os.WriteFile(testGoFilePath, []byte(source), os.ModePerm)
-	if err != nil {
-		t.Fatalf("write go file: %v", err)
-	}
-
-	woooCmd := exec.CommandContext(t.Context(), "./wooo", testGoFilePath)
-
 	watFilePath := path.Join(tempDirName, fmt.Sprintf("%d.wat", testNumber))
 	watFile, err := os.Create(watFilePath)
 	if err != nil {
@@ -129,15 +99,9 @@ func execWooo(t *testing.T, testNumber int, tempDirName string, source string) (
 	}
 	defer watFile.Close()
 
-	woooCmd.Stdout = watFile
-
-	err = woooCmd.Run()
-	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
-		t.Errorf("run wooo cmd: %v\nstderr: %s", err, string(exitErr.Stderr))
-		return "", false
-	} else if err != nil {
-		t.Errorf("run wooo cmd: %v", err)
-		return "", false
+	err = CompileBytes(watFile, testGoFilePath, []byte(source), false)
+	if err != nil {
+		t.Errorf("unexpected compile error: %v", err)
 	}
 
 	return watFilePath, true
