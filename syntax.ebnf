@@ -56,8 +56,22 @@ StatementList
   = { Statement, ";" };
 
 (* ## Declarations and scope *)
+Declaration
+  = VarDecl;
+
 TopLevelDecl
   = FunctionDecl;
+
+(* ### Constant declarations *)
+IdentifierList
+  = identifier;
+
+(* ### Variable declarations *)
+VarDecl
+  = "var", VarSpec;
+
+VarSpec
+  = IdentifierList, Type;
 
 (* ### Function declarations *)
 FunctionDecl
@@ -76,13 +90,16 @@ ExpressionList
 (* ## Expressions *)
 (* ### Operands *)
 Operand
-  = Literal | "(", Expression, ")";
+  = Literal | OperandName | "(", Expression, ")";
 
 Literal
   = BasicLit;
 
 BasicLit
   = int_lit;
+
+OperandName
+  = identifier;
 
 (* ### Primary expressions *)
 PrimaryExpr
@@ -109,7 +126,7 @@ unary_op
 
 (* ## Statements *)
 Statement
-  = ReturnStmt;
+  = Declaration | ReturnStmt;
 
 (* ### Return statements *)
 ReturnStmt

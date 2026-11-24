@@ -281,3 +281,17 @@ js = 'stdout.js'
 stdout = '''
 0
 '''
+
+[[test]]
+name = "ローカル変数初期化"
+source = """
+package run
+func Run() int {
+	var a int
+	return a
+}
+"""
+js = 'stdout.js'
+stdout = '''
+0
+'''

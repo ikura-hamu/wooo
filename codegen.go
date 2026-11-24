@@ -35,6 +35,11 @@ func (v *codegenVisitor) visit(n node) (visitor, postVisit, error) {
 			v.decrementIndent()
 			return nil
 		}, nil
+	case *varDecl:
+		v.incrementIndent()
+		v.emitf("(local $%s i32)\n", n.varSpec.identifierList.identifier.name)
+		v.decrementIndent()
+		return nil, nil, nil
 	case *expression:
 		if n.isBinary {
 			v.incrementIndent()
@@ -84,6 +89,12 @@ func (v *codegenVisitor) visit(n node) (visitor, postVisit, error) {
 			}, nil
 		}
 		return v, nil, nil
+	case *operandName:
+		// まだローカル変数しかないので仮実装
+		v.incrementIndent()
+		v.emitf("(local.get $%s)\n", n.operandName.name)
+		v.decrementIndent()
+		return nil, nil, nil
 	case *intLit:
 		v.incrementIndent()
 		v.emitf("(i32.const %d)\n", n.n)

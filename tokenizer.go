@@ -16,6 +16,8 @@ const (
 	TK_RETURN
 	// `package`
 	TK_PACKAGE
+	// `var`
+	TK_VAR
 	// 識別子
 	TK_IDENT
 	// 区切り記号
@@ -30,6 +32,7 @@ var keywords = map[tokenKind]string{
 	TK_FUNC:    "func",
 	TK_RETURN:  "return",
 	TK_PACKAGE: "package",
+	TK_VAR:     "var",
 }
 
 // token の場所を表す。

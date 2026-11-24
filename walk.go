@@ -35,10 +35,29 @@ func walk(v visitor, n node) (err error) {
 				return fmt.Errorf("walk topLevelDecl: %w", err)
 			}
 		}
+	case *declaration:
+		if err := walk(v, n.varDecl); err != nil {
+			return fmt.Errorf("walk declaration varDecl: %w", err)
+		}
 	case *topLevelDecl:
 		err := walk(v, n.functionDecl)
 		if err != nil {
 			return fmt.Errorf("walk functionDecl: %w", err)
+		}
+	case *identifierList:
+		if err := walk(v, n.identifier); err != nil {
+			return fmt.Errorf("walk identifierList identifier: %w", err)
+		}
+	case *varDecl:
+		if err := walk(v, n.varSpec); err != nil {
+			return fmt.Errorf("walk varDecl varSpec: %w", err)
+		}
+	case *varSpec:
+		if err := walk(v, n.identifierList); err != nil {
+			return fmt.Errorf("walk varSpec identifierList: %w", err)
+		}
+		if err := walk(v, n.typeNode); err != nil {
+			return fmt.Errorf("walk varSpec typeNode: %w", err)
 		}
 	case *functionDecl:
 		if err := walk(v, n.name); err != nil {
@@ -74,6 +93,14 @@ func walk(v visitor, n node) (err error) {
 		default:
 			return fmt.Errorf("unkown walk result kind: %v", err)
 		}
+	case *typeNode:
+		if err := walk(v, n.typeName); err != nil {
+			return fmt.Errorf("walk typeNode typeName: %w", err)
+		}
+	case *typeName:
+		if err := walk(v, n.identifier); err != nil {
+			return fmt.Errorf("walk typeName identifier: %w", err)
+		}
 	case *block:
 		if err := walk(v, n.statementList); err != nil {
 			return fmt.Errorf("walk block statementList: %w", err)
@@ -85,10 +112,17 @@ func walk(v visitor, n node) (err error) {
 			}
 		}
 	case *statement:
-		if n.statementKind == STATEMENT_RETURN {
+		switch n.statementKind {
+		case STATEMENT_DECLARATION:
+			if err := walk(v, n.declaration); err != nil {
+				return fmt.Errorf("walk statement declaration: %w", err)
+			}
+		case STATEMENT_RETURN:
 			if err := walk(v, n.returnStatement); err != nil {
 				return fmt.Errorf("walk statement returnStatement: %w", err)
 			}
+		default:
+			return fmt.Errorf("unknown statement kind: %v", n.statementKind)
 		}
 	case *returnStatement:
 		if n.expressions != nil {
@@ -138,6 +172,10 @@ func walk(v visitor, n node) (err error) {
 			if err := walk(v, n.literal); err != nil {
 				return fmt.Errorf("walk operand literal: %w", err)
 			}
+		case OPERAND_KIND_OPERAND_NAME:
+			if err := walk(v, n.operandName); err != nil {
+				return fmt.Errorf("walk operand operandName: %w", err)
+			}
 		case OPERAND_KIND_EXPRESSION_WITH_PARENTHESES:
 			if err := walk(v, n.expression); err != nil {
 				return fmt.Errorf("walk operand expression: %w", err)
@@ -152,6 +190,10 @@ func walk(v visitor, n node) (err error) {
 	case *basicLit:
 		if err := walk(v, n.intLit); err != nil {
 			return fmt.Errorf("walk basicLit intLit: %w", err)
+		}
+	case *operandName:
+		if err := walk(v, n.operandName); err != nil {
+			return fmt.Errorf("walk operandName: %w", err)
 		}
 	case *intLit:
 		return nil

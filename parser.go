@@ -40,6 +40,10 @@ func (p *parser) currentToken() *token {
 	return p.tokens[p.cursor]
 }
 
+func (p *parser) currentTokens(n int) []*token {
+	return p.tokens[p.cursor : p.cursor+n]
+}
+
 func (p *parser) isPunctuation(op string) bool {
 	return p.currentToken().kind == TK_PUNCTUATION && p.currentToken().value == op
 }
@@ -108,6 +112,23 @@ func (p *parser) sourceFile() (*sourceFile, error) {
 	}, nil
 }
 
+type declaration struct {
+	varDecl *varDecl
+	node
+}
+
+func (p *parser) declaration() (*declaration, error) {
+	if err := p.expectCurrentToken(TK_VAR); err != nil {
+		return nil, fmt.Errorf("expected var token: %w", err)
+	}
+
+	varDecl, err := p.varDecl()
+	if err != nil {
+		return nil, fmt.Errorf("varDecl: %w", err)
+	}
+	return &declaration{varDecl: varDecl, node: p.nodeData()}, nil
+}
+
 type topLevelDecl struct {
 	functionDecl *functionDecl
 	node
@@ -123,6 +144,57 @@ func (p *parser) topLevelDecl() (*topLevelDecl, error) {
 	}
 
 	return nil, fmt.Errorf("unexpected token")
+}
+
+type identifierList struct {
+	identifier *identifier
+	node
+}
+
+func (p *parser) identifierList() (*identifierList, error) {
+	identifier, err := p.identifier()
+	if err != nil {
+		return nil, fmt.Errorf("expected identifier: %w", err)
+	}
+
+	return &identifierList{identifier: identifier, node: p.nodeData()}, nil
+}
+
+type varDecl struct {
+	varSpec *varSpec
+	node
+}
+
+func (p *parser) varDecl() (*varDecl, error) {
+	varSpec, err := p.varSpec()
+	if err != nil {
+		return nil, fmt.Errorf("expected var spec: %w", err)
+	}
+	return &varDecl{varSpec: varSpec, node: p.nodeData()}, nil
+}
+
+type varSpec struct {
+	identifierList *identifierList
+	typeNode       *typeNode
+	node
+}
+
+func (p *parser) varSpec() (*varSpec, error) {
+	identifierList, err := p.identifierList()
+	if err != nil {
+		return nil, fmt.Errorf("expected identifier list: %w", err)
+	}
+
+	typeNode, err := p.typeNode()
+	if err != nil {
+		return nil, fmt.Errorf("expected type node: %w", err)
+	}
+
+	return &varSpec{
+		identifierList: identifierList,
+		typeNode:       typeNode,
+		node:           p.nodeData(),
+	}, nil
 }
 
 type functionDecl struct {
@@ -224,6 +296,7 @@ func (p *parser) result() (*result, error) {
 
 type typeNode struct {
 	typeName *typeName
+	node
 }
 
 func (p *parser) typeNode() (*typeNode, error) {
@@ -231,11 +304,12 @@ func (p *parser) typeNode() (*typeNode, error) {
 	if err != nil {
 		return nil, fmt.Errorf("expected type name: %w", err)
 	}
-	return &typeNode{typeName: typeName}, nil
+	return &typeNode{typeName: typeName, node: p.nodeData()}, nil
 }
 
 type typeName struct {
 	identifier *identifier
+	node
 }
 
 func (p *parser) typeName() (*typeName, error) {
@@ -243,7 +317,7 @@ func (p *parser) typeName() (*typeName, error) {
 	if err != nil {
 		return nil, fmt.Errorf("expected identifier: %w", err)
 	}
-	return &typeName{identifier: identifier}, nil
+	return &typeName{identifier: identifier, node: p.nodeData()}, nil
 }
 
 type block struct {
@@ -290,6 +364,17 @@ func (p *parser) statementList() (*statementList, error) {
 }
 
 func (p *parser) statement() (*statement, error) {
+	if p.currentToken().kind == TK_VAR {
+		declaration, err := p.declaration()
+		if err != nil {
+			return nil, fmt.Errorf("declaration: %w", err)
+		}
+		return &statement{
+			statementKind: STATEMENT_DECLARATION,
+			declaration:   declaration,
+			node:          p.nodeData(),
+		}, nil
+	}
 	if p.currentToken().kind == TK_RETURN {
 		returnStatement, err := p.returnStatement()
 		if err != nil {
@@ -308,11 +393,13 @@ func (p *parser) statement() (*statement, error) {
 type statementKind int
 
 const (
-	STATEMENT_RETURN = iota + 1
+	STATEMENT_DECLARATION statementKind = iota + 1
+	STATEMENT_RETURN
 )
 
 type statement struct {
 	statementKind   statementKind
+	declaration     *declaration
 	returnStatement *returnStatement
 	node
 }
@@ -538,13 +625,15 @@ type operandKind int
 
 const (
 	OPERAND_KIND_LITERAL operandKind = iota + 1
+	OPERAND_KIND_OPERAND_NAME
 	OPERAND_KIND_EXPRESSION_WITH_PARENTHESES
 )
 
 type operand struct {
-	kind       operandKind
-	literal    *literal
-	expression *expression
+	kind        operandKind
+	literal     *literal
+	operandName *operandName
+	expression  *expression
 	node
 }
 
@@ -570,11 +659,25 @@ func (p *parser) operand() (*operand, error) {
 		}, nil
 	}
 
-	literal, err := p.literal()
-	if err != nil {
-		return nil, fmt.Errorf("literal: %w", err)
+	tokens2 := p.currentTokens(2)
+	if tokens2[0].kind != TK_IDENT || tokens2[1].value == "{" {
+		// まだ composite literal には対応していないが、{ で区別できるのでする。
+		literal, err := p.literal()
+		if err != nil {
+			return nil, fmt.Errorf("literal: %w", err)
+		}
+		return &operand{
+			kind:    OPERAND_KIND_LITERAL,
+			literal: literal,
+			node:    p.nodeData(),
+		}, nil
 	}
-	return &operand{kind: OPERAND_KIND_LITERAL, literal: literal, node: p.nodeData()}, nil
+
+	operandName, err := p.operandName()
+	if err != nil {
+		return nil, fmt.Errorf("operand name: %w", err)
+	}
+	return &operand{kind: OPERAND_KIND_OPERAND_NAME, operandName: operandName, node: p.nodeData()}, nil
 }
 
 type literal struct {
@@ -601,6 +704,19 @@ func (p *parser) basicLit() (*basicLit, error) {
 		return nil, fmt.Errorf("intLit: %w", err)
 	}
 	return &basicLit{intLit: intL, node: p.nodeData()}, nil
+}
+
+type operandName struct {
+	operandName *identifier
+	node
+}
+
+func (p *parser) operandName() (*operandName, error) {
+	identifier, err := p.identifier()
+	if err != nil {
+		return nil, fmt.Errorf("expected identifier: %w", err)
+	}
+	return &operandName{operandName: identifier, node: p.nodeData()}, nil
 }
 
 type intLit struct {
