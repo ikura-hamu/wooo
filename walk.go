@@ -157,6 +157,14 @@ func walk(v visitor, n node) (err error) {
 		return nil
 	case *identifier:
 		return nil
+	case *packageClause:
+		if err := walk(v, n.packageName); err != nil {
+			return fmt.Errorf("walk packageClause packageName: %w", err)
+		}
+	case *packageName:
+		if err := walk(v, n.identifier); err != nil {
+			return fmt.Errorf("walk packageName identifier: %w", err)
+		}
 	default:
 		return fmt.Errorf("walk: unexpected node type %T", n)
 	}

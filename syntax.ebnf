@@ -118,4 +118,11 @@ ReturnStmt
 (* ## Packages *)
 (* ### Source file organization *)
 SourceFile
-  = { TopLevelDecl, ";" };
+  = PackageClause, ";", { TopLevelDecl, ";" };
+
+(* ### Package clause *)
+PackageClause
+  = "package", PackageName;
+
+PackageName
+  = identifier;

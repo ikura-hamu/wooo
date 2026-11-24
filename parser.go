@@ -73,11 +73,21 @@ func parse(tokens []*token) (*sourceFile, error) {
 }
 
 type sourceFile struct {
+	packageClause *packageClause
 	toplevelDecls []*topLevelDecl
 	node
 }
 
 func (p *parser) sourceFile() (*sourceFile, error) {
+	packageClause, err := p.packageClause()
+	if err != nil {
+		return nil, fmt.Errorf("packageClause: %w", err)
+	}
+
+	if err := p.expectPunctuation(";"); err != nil {
+		return nil, fmt.Errorf("expect ';': %w", err)
+	}
+
 	toplevelDecls := make([]*topLevelDecl, 0)
 	for p.currentToken().kind != TK_EOF {
 		decl, err := p.topLevelDecl()
@@ -91,7 +101,11 @@ func (p *parser) sourceFile() (*sourceFile, error) {
 		}
 	}
 
-	return &sourceFile{toplevelDecls: toplevelDecls, node: p.nodeData()}, nil
+	return &sourceFile{
+		packageClause: packageClause,
+		toplevelDecls: toplevelDecls,
+		node:          p.nodeData(),
+	}, nil
 }
 
 type topLevelDecl struct {
@@ -615,4 +629,33 @@ func (p *parser) identifier() (*identifier, error) {
 	name := p.currentToken().value
 	p.cursor++
 	return &identifier{name: name, node: p.nodeData()}, nil
+}
+
+type packageClause struct {
+	packageName *packageName
+	node
+}
+
+func (p *parser) packageClause() (*packageClause, error) {
+	if err := p.expectCurrentToken(TK_PACKAGE); err != nil {
+		return nil, fmt.Errorf("expected \"package\": %w", err)
+	}
+	packageName, err := p.packageName()
+	if err != nil {
+		return nil, fmt.Errorf("expected package name: %w", err)
+	}
+	return &packageClause{packageName: packageName, node: p.nodeData()}, nil
+}
+
+type packageName struct {
+	identifier *identifier
+	node
+}
+
+func (p *parser) packageName() (*packageName, error) {
+	identifier, err := p.identifier()
+	if err != nil {
+		return nil, fmt.Errorf("expected identifier: %w", err)
+	}
+	return &packageName{identifier: identifier, node: p.nodeData()}, nil
 }
